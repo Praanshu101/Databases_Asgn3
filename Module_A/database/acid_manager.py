@@ -48,6 +48,8 @@ class ACIDTransactionManager:
         self.db_manager = db_manager
         self.db_name = db_name
         self._lock = threading.RLock()
+        self._tx_gate = threading.Lock()
+        self._gated_txs: set[str] = set()
         self._active: dict[str, TransactionContext] = {}
         self._lsn = 0
 
@@ -61,11 +63,18 @@ class ACIDTransactionManager:
 
     def begin(self) -> str:
         """Begin a new transaction and return transaction id."""
+        # Serialize full transaction lifetime (BEGIN -> COMMIT/ROLLBACK).
+        self._tx_gate.acquire()
         with self._lock:
-            txid = uuid.uuid4().hex
-            self._active[txid] = TransactionContext(txid=txid)
-            self._append_wal({"type": "BEGIN", "txid": txid})
-            return txid
+            try:
+                txid = uuid.uuid4().hex
+                self._active[txid] = TransactionContext(txid=txid)
+                self._gated_txs.add(txid)
+                self._append_wal({"type": "BEGIN", "txid": txid})
+                return txid
+            except Exception:
+                self._tx_gate.release()
+                raise
 
     def insert(self, txid: str, table: str, key: Any, value: Any) -> None:
         self._enqueue(txid, TxOperation(op="SET", table=table, key=key, value=value))
@@ -79,9 +88,12 @@ class ACIDTransactionManager:
     def rollback(self, txid: str) -> None:
         """Rollback by dropping pending writes (deferred updates)."""
         with self._lock:
-            self._require_tx(txid)
-            self._append_wal({"type": "ROLLBACK", "txid": txid})
-            del self._active[txid]
+            try:
+                self._require_tx(txid)
+                self._append_wal({"type": "ROLLBACK", "txid": txid})
+                del self._active[txid]
+            finally:
+                self._release_tx_gate(txid)
 
     def commit(
         self,
@@ -99,32 +111,57 @@ class ACIDTransactionManager:
             fail_after_apply_ops: Simulates crash after N applied operations.
         """
         with self._lock:
-            ctx = self._require_tx(txid)
+            ctx: TransactionContext | None = None
+            try:
+                ctx = self._require_tx(txid)
 
-            for op in ctx.operations:
-                self._append_wal(
-                    {
-                        "type": op.op,
-                        "txid": txid,
-                        "table": op.table,
-                        "key": op.key,
-                        "value": op.value,
-                    }
-                )
+                for op in ctx.operations:
+                    self._append_wal(
+                        {
+                            "type": op.op,
+                            "txid": txid,
+                            "table": op.table,
+                            "key": op.key,
+                            "value": op.value,
+                        }
+                    )
 
-            self._append_wal({"type": "COMMIT", "txid": txid})
+                # Validate constraints on the staged post-transaction state before COMMIT is logged.
+                if consistency_checks:
+                    staged_db = self._build_staged_db_manager(ctx.operations)
+                    for check in consistency_checks:
+                        check(staged_db)
 
-            if fail_after_wal:
-                raise RuntimeError("Simulated crash after COMMIT WAL record")
+                self._append_wal({"type": "COMMIT", "txid": txid})
 
-            self._apply_operations(ctx.operations, fail_after_apply_ops=fail_after_apply_ops)
+                if fail_after_wal:
+                    raise RuntimeError("Simulated crash after COMMIT WAL record")
 
-            if consistency_checks:
-                for check in consistency_checks:
-                    check(self.db_manager)
+                self._apply_operations(ctx.operations, fail_after_apply_ops=fail_after_apply_ops)
 
-            self._save_snapshot()
-            del self._active[txid]
+                self._save_snapshot()
+                # Checkpoint complete: committed state is persisted in snapshot, so WAL can be reset.
+                self.wal_path.write_text("", encoding="utf-8")
+                del self._active[txid]
+            except RuntimeError as exc:
+                # Preserve crash-simulation semantics: COMMIT may already be logged and should be recoverable.
+                if str(exc) in {
+                    "Simulated crash after COMMIT WAL record",
+                    "Simulated crash during data application",
+                }:
+                    raise
+
+                if txid in self._active:
+                    self._append_wal({"type": "ROLLBACK", "txid": txid})
+                    del self._active[txid]
+                raise
+            except Exception:
+                if txid in self._active:
+                    self._append_wal({"type": "ROLLBACK", "txid": txid})
+                    del self._active[txid]
+                raise
+            finally:
+                self._release_tx_gate(txid)
 
     def recover(self) -> None:
         """Recover database by redoing committed transactions from WAL."""
@@ -182,6 +219,37 @@ class ACIDTransactionManager:
         if txid not in self._active:
             raise KeyError(f"Transaction '{txid}' is not active")
         return self._active[txid]
+
+    def _release_tx_gate(self, txid: str) -> None:
+        if txid in self._gated_txs:
+            self._gated_txs.remove(txid)
+            self._tx_gate.release()
+
+    def _build_staged_db_manager(self, operations: list[TxOperation]) -> DatabaseManager:
+        staged = DatabaseManager()
+
+        for table_name in self.db_manager.list_tables(self.db_name):
+            source_table = self.db_manager.get_table(self.db_name, table_name)
+            target_table = staged.create_table(
+                self.db_name,
+                table_name,
+                source_table.schema,
+                order=source_table.index.order,
+                search_key=source_table.search_key,
+            )
+            for key, value in source_table.get_all():
+                target_table.insert(key, value)
+
+        for op in operations:
+            table = staged.get_table(self.db_name, op.table)
+            if op.op == "SET":
+                table.insert(op.key, op.value)
+            elif op.op == "DELETE":
+                table.delete(op.key)
+            else:
+                raise ValueError(f"Unknown operation '{op.op}'")
+
+        return staged
 
     def _apply_operations(
         self,
