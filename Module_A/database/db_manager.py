@@ -70,6 +70,7 @@ class DatabaseManager:
         self._default_db = "__default__"  # Backward-compatible default namespace
         self.databases: Dict[str, Dict[str, Table]] = {self._default_db: {}}
         self._tables = self.databases[self._default_db]  # Legacy alias used elsewhere
+        self._foreign_keys: Dict[str, Dict[str, List[dict[str, Any]]]] = {self._default_db: {}}
 
     def create_database(self, db_name: str) -> None:
         """Create a new logical database namespace.
@@ -86,6 +87,7 @@ class DatabaseManager:
             raise ValueError(f"Database '{db_name}' already exists")
         # Initialize empty table registry for this database
         self.databases[db_name] = {}
+        self._foreign_keys[db_name] = {}
 
     def delete_database(self, db_name: str) -> None:
         """Delete an existing logical database namespace.
@@ -105,6 +107,7 @@ class DatabaseManager:
             raise KeyError(f"Database '{db_name}' does not exist")
         # Remove entire namespace and all its table references
         del self.databases[db_name]
+        del self._foreign_keys[db_name]
 
     def list_databases(self) -> List[str]:
         """Return names of all available databases.
@@ -166,8 +169,215 @@ class DatabaseManager:
         # Keep old direct access in sync for default database users.
         if db_name == self._default_db:
             self._tables = tables
+            self._foreign_keys.setdefault(db_name, {})
 
         return table
+
+    def add_foreign_key(
+        self,
+        table_name: str,
+        column: str,
+        referenced_table: str,
+        referenced_column: str | None = None,
+        db_name: str | None = None,
+        referenced_db_name: str | None = None,
+        on_delete: str = "restrict",
+    ) -> None:
+        """Register a foreign-key constraint for a table column.
+
+        The constraint is stored in the database manager and enforced on writes.
+        """
+
+        selected_db = db_name or self._default_db
+        referenced_db = referenced_db_name or selected_db
+        table = self.get_table(selected_db, table_name)
+        ref_table = self.get_table(referenced_db, referenced_table)
+
+        if table.schema is not None and column not in table.schema:
+            raise KeyError(f"Column '{column}' does not exist in table '{table_name}'")
+
+        if referenced_column is None:
+            referenced_column = ref_table.search_key or next(iter(ref_table.schema or {}), None)
+        if referenced_column is None:
+            raise ValueError("Referenced column could not be determined for foreign key")
+
+        constraint = {
+            "column": column,
+            "referenced_db": referenced_db,
+            "referenced_table": referenced_table,
+            "referenced_column": referenced_column,
+            "on_delete": on_delete.lower(),
+        }
+        self._foreign_keys.setdefault(selected_db, {}).setdefault(table_name, []).append(constraint)
+
+    def list_foreign_keys(self, db_name: str | None = None) -> Dict[str, List[dict[str, Any]]]:
+        """Return registered foreign keys for a database namespace."""
+
+        selected_db = db_name or self._default_db
+        return {
+            table_name: [dict(constraint) for constraint in constraints]
+            for table_name, constraints in self._foreign_keys.get(selected_db, {}).items()
+        }
+
+    def insert_record(self, db_name: str, table_name: str, key: Any, record: Any) -> None:
+        """Insert a record while enforcing local and foreign-key constraints."""
+
+        table = self.get_table(db_name, table_name)
+        table.validate_record(record)
+        self._validate_foreign_keys(db_name, table_name, record)
+        table.insert(key, record)
+
+    def update_record(self, db_name: str, table_name: str, key: Any, record: Any) -> bool:
+        """Update a record while enforcing local and foreign-key constraints."""
+
+        table = self.get_table(db_name, table_name)
+        table.validate_record(record)
+        self._validate_foreign_keys(db_name, table_name, record)
+        return table.update(key, record)
+
+    def delete_record(self, db_name: str, table_name: str, key: Any) -> bool:
+        """Delete a record while respecting referenced rows from foreign keys."""
+
+        table = self.get_table(db_name, table_name)
+        existing = table.select(key)
+        if existing is None:
+            return False
+
+        self._validate_no_incoming_foreign_key_refs(db_name, table_name, key)
+        return table.delete(key)
+
+    def join_tables(
+        self,
+        left_table_name: str,
+        right_table_name: str,
+        left_column: str,
+        right_column: str | None = None,
+        db_name: str | None = None,
+        join_type: str = "inner",
+    ) -> List[dict[str, Any]]:
+        """Perform an equi-join between two tables using B+Tree-backed access.
+
+        The join is resolved using the right table's primary-key index when possible,
+        otherwise it falls back to a scan over the right table's B+Tree records.
+        """
+
+        selected_db = db_name or self._default_db
+        left_table = self.get_table(selected_db, left_table_name)
+        right_table = self.get_table(selected_db, right_table_name)
+        right_column = right_column or right_table.search_key
+        if right_column is None:
+            raise ValueError("Right table does not have a joinable key")
+
+        join_kind = join_type.lower()
+        if join_kind not in {"inner", "left"}:
+            raise ValueError("join_type must be 'inner' or 'left'")
+
+        right_rows = right_table.get_all()
+        right_indexed = right_column == right_table.search_key
+        joined_rows: List[dict[str, Any]] = []
+
+        for left_key, left_row in left_table.get_all():
+            if not isinstance(left_row, dict):
+                continue
+            join_value = left_row.get(left_column)
+            matches: list[tuple[Any, Any]] = []
+
+            if right_indexed:
+                right_row = right_table.select(join_value)
+                if right_row is not None and isinstance(right_row, dict):
+                    if right_row.get(right_column) == join_value:
+                        matches.append((join_value, right_row))
+            else:
+                for right_key, right_row in right_rows:
+                    if isinstance(right_row, dict) and right_row.get(right_column) == join_value:
+                        matches.append((right_key, right_row))
+
+            if not matches and join_kind == "left":
+                joined_rows.append(self._merge_join_rows(left_table_name, left_key, left_row, right_table_name, None, None))
+                continue
+
+            for right_key, right_row in matches:
+                joined_rows.append(
+                    self._merge_join_rows(
+                        left_table_name,
+                        left_key,
+                        left_row,
+                        right_table_name,
+                        right_key,
+                        right_row,
+                    )
+                )
+
+        return joined_rows
+
+    def _merge_join_rows(
+        self,
+        left_table_name: str,
+        left_key: Any,
+        left_row: dict[str, Any],
+        right_table_name: str,
+        right_key: Any | None,
+        right_row: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        merged: dict[str, Any] = {
+            f"{left_table_name}.__key__": left_key,
+        }
+        merged.update({f"{left_table_name}.{k}": v for k, v in left_row.items()})
+
+        if right_row is None:
+            merged[f"{right_table_name}.__key__"] = None
+        else:
+            merged[f"{right_table_name}.__key__"] = right_key
+            merged.update({f"{right_table_name}.{k}": v for k, v in right_row.items()})
+
+        return merged
+
+    def _validate_foreign_keys(self, db_name: str, table_name: str, record: Any) -> None:
+        if not isinstance(record, dict):
+            return
+
+        for constraint in self._foreign_keys.get(db_name, {}).get(table_name, []):
+            column = constraint["column"]
+            if column not in record or record[column] is None:
+                continue
+
+            ref_table = self.get_table(constraint["referenced_db"], constraint["referenced_table"])
+            ref_column = constraint["referenced_column"]
+            ref_value = record[column]
+
+            if ref_column == ref_table.search_key:
+                if ref_table.select(ref_value) is None:
+                    raise ValueError(
+                        f"Foreign key violation: {table_name}.{column} references missing "
+                        f"{constraint['referenced_table']}.{ref_column}={ref_value}"
+                    )
+                continue
+
+            if not any(
+                isinstance(row, dict) and row.get(ref_column) == ref_value
+                for _, row in ref_table.get_all()
+            ):
+                raise ValueError(
+                    f"Foreign key violation: {table_name}.{column} references missing "
+                    f"{constraint['referenced_table']}.{ref_column}={ref_value}"
+                )
+
+    def _validate_no_incoming_foreign_key_refs(self, db_name: str, table_name: str, key: Any) -> None:
+        for source_table_name, constraints in self._foreign_keys.get(db_name, {}).items():
+            source_table = self.get_table(db_name, source_table_name)
+            for constraint in constraints:
+                if constraint["referenced_table"] != table_name:
+                    continue
+                ref_column = constraint["referenced_column"]
+                if ref_column != self.get_table(db_name, table_name).search_key:
+                    continue
+
+                for _, row in source_table.get_all():
+                    if isinstance(row, dict) and row.get(constraint["column"]) == key:
+                        raise ValueError(
+                            f"Foreign key violation: cannot delete {table_name}[{key}] while it is referenced by "
+                            f"{source_table_name}.{constraint['column']}"
+                        )
     
     def get_table(self, *args: str) -> Table:
         """Retrieve an existing table by name.

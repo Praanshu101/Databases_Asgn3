@@ -243,9 +243,9 @@ class ACIDTransactionManager:
         for op in operations:
             table = staged.get_table(self.db_name, op.table)
             if op.op == "SET":
-                table.insert(op.key, op.value)
+                staged.insert_record(self.db_name, op.table, op.key, op.value)
             elif op.op == "DELETE":
-                table.delete(op.key)
+                staged.delete_record(self.db_name, op.table, op.key)
             else:
                 raise ValueError(f"Unknown operation '{op.op}'")
 
@@ -258,11 +258,10 @@ class ACIDTransactionManager:
     ) -> None:
         applied = 0
         for op in operations:
-            table = self.db_manager.get_table(self.db_name, op.table)
             if op.op == "SET":
-                table.insert(op.key, op.value)
+                self.db_manager.insert_record(self.db_name, op.table, op.key, op.value)
             elif op.op == "DELETE":
-                table.delete(op.key)
+                self.db_manager.delete_record(self.db_name, op.table, op.key)
             else:
                 raise ValueError(f"Unknown operation '{op.op}'")
 
@@ -300,6 +299,7 @@ class ACIDTransactionManager:
         snapshot: dict[str, Any] = {
             "db_name": self.db_name,
             "tables": {},
+            "foreign_keys": self.db_manager.list_foreign_keys(self.db_name),
         }
 
         for table_name in self.db_manager.list_tables(self.db_name):
@@ -340,6 +340,18 @@ class ACIDTransactionManager:
             )
             for key, value in tbl_data.get("records", []):
                 table.insert(key, value)
+
+        for table_name, constraints in data.get("foreign_keys", {}).items():
+            for constraint in constraints:
+                self.db_manager.add_foreign_key(
+                    table_name,
+                    constraint["column"],
+                    constraint["referenced_table"],
+                    referenced_column=constraint.get("referenced_column"),
+                    db_name=self.db_name,
+                    referenced_db_name=constraint.get("referenced_db"),
+                    on_delete=constraint.get("on_delete", "restrict"),
+                )
 
 
 def ecommerce_consistency_check(db: DatabaseManager, db_name: str = "__default__") -> None:

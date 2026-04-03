@@ -9,11 +9,10 @@ from pathlib import Path
 
 # Allow importing Module_A/database package from Module_B/app.
 ROOT = Path(__file__).resolve().parents[2]
-MODULE_A_DIR = ROOT / "Module_A"
-if str(MODULE_A_DIR) not in sys.path:
-    sys.path.insert(0, str(MODULE_A_DIR))
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-from database import ACIDTransactionManager, DatabaseManager, ecommerce_consistency_check
+from Module_A.database import ACIDTransactionManager, DatabaseManager, ecommerce_consistency_check
 
 
 def setup_system(data_dir: str, initial_stock: int = 800) -> ACIDTransactionManager:

@@ -27,6 +27,8 @@ def setup_manager(data_dir: str) -> ACIDTransactionManager:
         order=8,
         search_key="order_id",
     )
+    db.add_foreign_key("orders", "user_id", "users", db_name="__default__")
+    db.add_foreign_key("orders", "product_id", "products", db_name="__default__")
 
     tm = ACIDTransactionManager(db, storage_dir=data_dir)
 
@@ -86,6 +88,39 @@ def place_order(
         consistency_checks=[lambda dbm: ecommerce_consistency_check(dbm)],
         fail_after_wal=simulate_fail,
     )
+
+
+def test_join_and_foreign_keys(base_dir: str) -> None:
+    print("[JOIN + Foreign Key] Validating join output and FK enforcement...")
+    tm = setup_manager(base_dir)
+
+    place_order(tm, order_id=3001, user_id=1, product_id=1, qty=1)
+
+    joined_rows = tm.db_manager.join_tables("orders", "users", "user_id", "user_id")
+    assert any(row.get("orders.order_id") == 3001 and row.get("users.user_id") == 1 for row in joined_rows)
+
+    fk_tx = tm.begin()
+    tm.insert(
+        fk_tx,
+        "orders",
+        3002,
+        {"order_id": 3002, "user_id": 999, "product_id": 1, "amount": 50},
+    )
+    try:
+        tm.commit(fk_tx, consistency_checks=[lambda dbm: ecommerce_consistency_check(dbm)])
+        raise AssertionError("Expected foreign key violation was not raised")
+    except ValueError:
+        pass
+
+    user_delete_tx = tm.begin()
+    tm.delete(user_delete_tx, "users", 1)
+    try:
+        tm.commit(user_delete_tx, consistency_checks=[lambda dbm: ecommerce_consistency_check(dbm)])
+        raise AssertionError("Expected referential delete violation was not raised")
+    except ValueError:
+        pass
+
+    print("[JOIN + Foreign Key] PASS")
 
 
 def test_atomicity_and_recovery(base_dir: str) -> None:
@@ -158,6 +193,10 @@ def main() -> None:
     base.mkdir(parents=True, exist_ok=True)
 
     test_isolation_with_concurrency(str(base))
+    if base.exists():
+        shutil.rmtree(base)
+    base.mkdir(parents=True, exist_ok=True)
+    test_join_and_foreign_keys(str(base))
     print("All ACID validation checks passed.")
 
 
