@@ -1,0 +1,88 @@
+2026-03-20 23:56:51,866 - INFO - User karan_law logged in successfully.
+2026-03-20 23:57:02,857 - INFO - User admin_rahul logged in successfully.
+2026-03-20 23:57:24,371 - INFO - ADMIN ACTION: Admin admin_rahul deleted MemberID 4.
+2026-03-20 23:57:50,409 - INFO - ADMIN ACTION: Admin admin_rahul added new user sneha_ (MemberID: 12).
+2026-03-20 23:58:42,996 - INFO - User user_ananya logged in successfully.
+2026-03-20 23:58:48,313 - INFO - DATA MODIFICATION: User user_ananya updated their profile.
+2026-03-21 00:03:46,008 - INFO - User user_ananya logged in successfully.
+2026-03-21 00:03:56,932 - INFO - User user_ananya logged in successfully.
+2026-03-21 00:04:06,528 - INFO - User user_ananya logged in successfully.
+2026-03-21 00:04:41,961 - INFO - User admin_rahul logged in successfully.
+2026-03-21 00:05:22,784 - INFO - User admin_rahul logged in successfully.
+2026-03-21 00:05:33,269 - INFO - User user_ananya logged in successfully.
+2026-03-21 00:08:44,179 - INFO - SECURITY: User user_ananya changed their password.
+2026-03-21 00:09:17,208 - INFO - User user_ananya logged in successfully.
+2026-03-21 12:03:35,065 - WARNING - NO SESSION FOUND: Attempted access without a valid session token.
+2026-03-21 12:19:30,920 - INFO - User admin_rahul logged in successfully.
+2026-03-21 12:19:31,160 - INFO - PERFORMANCE: GET /api/admin/users - Execution Time: 37.12 ms
+2026-03-21 12:19:31,206 - INFO - PERFORMANCE: GET /api/admin/form-data - Execution Time: 80.14 ms
+2026-03-21 12:19:31,300 - INFO - PERFORMANCE: GET /api/admin/trips - Execution Time: 171.22 ms
+2026-03-21 12:20:13,627 - INFO - ADMIN ACTION: Admin admin_rahul cancelled TripID 18.
+2026-03-21 12:20:13,628 - INFO - PERFORMANCE: DELETE /api/admin/trips/18 - Execution Time: 15.11 ms
+2026-03-21 12:20:13,803 - INFO - PERFORMANCE: GET /api/admin/trips - Execution Time: 145.72 ms
+2026-03-21 12:20:55,695 - INFO - User user_ananya logged in successfully.
+2026-03-21 12:20:55,896 - INFO - PERFORMANCE: GET /api/profile - Execution Time: 9.37 ms
+2026-03-21 12:20:56,207 - INFO - PERFORMANCE: GET /api/bookings - Execution Time: 318.33 ms
+2026-03-21 12:21:30,595 - INFO - DATA MODIFICATION: User user_ananya updated their profile.
+2026-03-21 12:21:30,596 - INFO - PERFORMANCE: PUT /api/profile - Execution Time: 12.92 ms
+2026-03-21 12:22:30,610 - INFO - User karan_law logged in successfully.
+2026-03-21 12:22:30,799 - INFO - PERFORMANCE: GET /api/profile - Execution Time: 7.18 ms
+2026-03-21 12:22:31,007 - INFO - PERFORMANCE: GET /api/bookings - Execution Time: 218.39 ms
+2026-03-21 12:22:50,508 - INFO - User sneha_ logged in successfully.
+2026-03-21 12:22:50,720 - INFO - PERFORMANCE: GET /api/profile - Execution Time: 10.10 ms
+2026-03-21 12:22:50,938 - INFO - PERFORMANCE: GET /api/bookings - Execution Time: 225.56 ms
+2026-03-21 12:26:01,499 - INFO - PERFORMANCE: GET /api/profile - Execution Time: 3.03 ms
+2026-03-21 12:26:01,654 - INFO - PERFORMANCE: GET /api/bookings - Execution Time: 159.13 ms
+2026-03-21 12:26:29,931 - INFO - User user_ananya logged in successfully.
+2026-03-21 12:26:30,138 - INFO - PERFORMANCE: GET /api/profile - Execution Time: 9.59 ms
+2026-03-21 12:26:30,329 - INFO - PERFORMANCE: GET /api/bookings - Execution Time: 197.19 ms
+2026-03-21 20:52:12,876 - INFO - User admin_rahul logged in successfully.
+2026-03-21 20:52:13,148 - INFO - PERFORMANCE: GET /api/admin/users - Execution Time: 41.22 ms
+2026-03-21 20:52:13,194 - INFO - PERFORMANCE: GET /api/admin/form-data - Execution Time: 95.79 ms
+2026-03-21 20:52:13,236 - INFO - PERFORMANCE: GET /api/admin/trips - Execution Time: 133.82 ms
+2026-03-21 20:57:00,925 - INFO - User admin_rahul logged in successfully.
+2026-03-21 20:57:01,129 - INFO - PERFORMANCE: GET /api/admin/users - Execution Time: 15.56 ms
+2026-03-21 20:57:01,138 - INFO - PERFORMANCE: GET /api/admin/form-data - Execution Time: 28.38 ms
+2026-03-21 20:57:01,254 - INFO - PERFORMANCE: GET /api/admin/trips - Execution Time: 138.86 ms
+2026-03-21 20:59:05,411 - INFO - ADMIN ACTION: Admin admin_rahul cancelled TripID 274.
+2026-03-21 20:59:05,412 - INFO - PERFORMANCE: DELETE /api/admin/trips/274 - Execution Time: 20.38 ms
+2026-03-21 20:59:05,622 - INFO - PERFORMANCE: GET /api/admin/trips - Execution Time: 157.03 ms
+2026-03-21 21:01:19,650 - INFO - PERFORMANCE: GET /api/admin/users - Execution Time: 5.80 ms
+2026-03-21 21:01:19,653 - INFO - PERFORMANCE: GET /api/admin/form-data - Execution Time: 11.02 ms
+2026-03-21 21:01:19,707 - INFO - PERFORMANCE: GET /api/admin/trips - Execution Time: 63.34 ms
+2026-03-21 21:01:46,495 - INFO - PERFORMANCE: GET /api/admin/users - Execution Time: 4.44 ms
+2026-03-21 21:01:46,505 - INFO - PERFORMANCE: GET /api/admin/form-data - Execution Time: 14.66 ms
+2026-03-21 21:01:46,550 - INFO - PERFORMANCE: GET /api/admin/trips - Execution Time: 60.96 ms
+2026-03-21 21:02:04,015 - WARNING - NO SESSION FOUND: Attempted access without a valid session token.
+2026-03-21 21:02:04,016 - INFO - PERFORMANCE: GET /api/admin/users - Execution Time: 1.05 ms
+2026-03-21 21:02:43,463 - INFO - User user_ananya logged in successfully.
+2026-03-21 21:02:43,689 - INFO - PERFORMANCE: GET /api/profile - Execution Time: 11.94 ms
+2026-03-21 21:02:44,005 - INFO - PERFORMANCE: GET /api/bookings - Execution Time: 323.91 ms
+2026-03-21 21:03:45,827 - INFO - SECURITY: User user_ananya changed their password.
+2026-03-21 21:03:45,828 - INFO - PERFORMANCE: PUT /api/change-password - Execution Time: 13.98 ms
+2026-03-21 21:05:00,012 - INFO - DATA MODIFICATION: User user_ananya updated their profile.
+2026-03-21 21:05:00,014 - INFO - PERFORMANCE: PUT /api/profile - Execution Time: 14.02 ms
+2026-03-21 21:11:10,941 - WARNING - NO SESSION FOUND: Attempted access without a valid session token.
+2026-03-21 21:11:10,942 - INFO - PERFORMANCE: GET /api/admin/users - Execution Time: 1.03 ms
+2026-03-21 22:20:07,130 - INFO - User user_ananya logged in successfully.
+2026-03-21 22:20:07,355 - INFO - PERFORMANCE: GET /api/profile - Execution Time: 7.85 ms
+2026-03-21 22:20:07,537 - INFO - PERFORMANCE: GET /api/bookings - Execution Time: 187.59 ms
+2026-03-21 22:20:46,116 - INFO - DATA MODIFICATION: User user_ananya updated their profile.
+2026-03-21 22:20:46,117 - INFO - PERFORMANCE: PUT /api/profile - Execution Time: 12.42 ms
+2026-03-21 22:36:53,950 - INFO - User admin_rahul logged in successfully.
+2026-03-21 22:36:54,165 - INFO - PERFORMANCE: GET /api/admin/users - Execution Time: 20.54 ms
+2026-03-21 22:36:54,167 - INFO - PERFORMANCE: GET /api/admin/form-data - Execution Time: 29.92 ms
+2026-03-21 22:36:54,350 - INFO - PERFORMANCE: GET /api/admin/trips - Execution Time: 208.49 ms
+2026-03-21 22:37:41,449 - INFO - ADMIN ACTION: Admin admin_rahul cancelled TripID 13.
+2026-03-21 22:37:41,450 - INFO - PERFORMANCE: DELETE /api/admin/trips/13 - Execution Time: 16.38 ms
+2026-03-21 22:37:41,670 - INFO - PERFORMANCE: GET /api/admin/trips - Execution Time: 197.46 ms
+2026-03-21 22:38:43,927 - INFO - ADMIN ACTION: Admin admin_rahul added a new trip (TripID: 1013).
+2026-03-21 22:38:43,929 - INFO - PERFORMANCE: POST /api/admin/trips - Execution Time: 32.04 ms
+2026-03-21 22:38:44,104 - INFO - PERFORMANCE: GET /api/admin/trips - Execution Time: 159.09 ms
+2026-03-21 22:39:20,131 - INFO - User user_ananya logged in successfully.
+2026-03-21 22:39:20,357 - INFO - PERFORMANCE: GET /api/profile - Execution Time: 9.98 ms
+2026-03-21 22:39:20,601 - INFO - PERFORMANCE: GET /api/bookings - Execution Time: 250.68 ms
+2026-03-21 22:39:49,200 - INFO - DATA MODIFICATION: User user_ananya updated their profile.
+2026-03-21 22:39:49,201 - INFO - PERFORMANCE: PUT /api/profile - Execution Time: 24.50 ms
+2026-03-21 22:40:21,786 - WARNING - NO SESSION FOUND: Attempted access without a valid session token.
+2026-03-21 22:40:21,787 - INFO - PERFORMANCE: GET /api/admin/users - Execution Time: 1.06 ms
