@@ -1,6 +1,6 @@
-{"lsn":11,"type":"BEGIN","txid":"c3233b6b508d4bf28f972a809ea96cdf"}
-{"lsn":12,"type":"SET","txid":"c3233b6b508d4bf28f972a809ea96cdf","table":"booking","key":3002,"value":{"BookingID":3002,"MemberID":999,"TripID":101,"SeatNo":"A2","BookingTime":"2026-04-04T09:47:00.214608+00:00","Status":"confirmed"}}
-{"lsn":13,"type":"ROLLBACK","txid":"c3233b6b508d4bf28f972a809ea96cdf"}
-{"lsn":14,"type":"BEGIN","txid":"1e926721be844054a3fe12c6c6790dbf"}
-{"lsn":15,"type":"DELETE","txid":"1e926721be844054a3fe12c6c6790dbf","table":"trip","key":101,"value":null}
-{"lsn":16,"type":"ROLLBACK","txid":"1e926721be844054a3fe12c6c6790dbf"}
+{"lsn":11,"type":"BEGIN","txid":"b3ad53a493934d0f9c47aaee35b6f584"}
+{"lsn":12,"type":"SET","txid":"b3ad53a493934d0f9c47aaee35b6f584","table":"booking","key":3002,"value":{"BookingID":3002,"MemberID":999,"TripID":101,"SeatNo":"A2","BookingTime":"2026-04-04T14:51:51.827350+00:00","Status":"confirmed"}}
+{"lsn":13,"type":"ROLLBACK","txid":"b3ad53a493934d0f9c47aaee35b6f584"}
+{"lsn":14,"type":"BEGIN","txid":"29c16c26825743aea30214850dad3979"}
+{"lsn":15,"type":"DELETE","txid":"29c16c26825743aea30214850dad3979","table":"trip","key":101,"value":null}
+{"lsn":16,"type":"ROLLBACK","txid":"29c16c26825743aea30214850dad3979"}

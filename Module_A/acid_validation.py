@@ -217,6 +217,136 @@ def place_booking(
     )
 
 
+def test_acid_on_joins(base_dir: str) -> None:
+    # This test verifies ACID properties specifically on join operations.
+    # Joins must see consistent snapshots (Consistency), respect serializability (Isolation),
+    # and reflect only committed data (Atomicity + Durability).
+    print("[ACID on JOINs] Testing join operations under transaction semantics...")
+    tm = setup_manager(base_dir)
+
+    #   ATOMICITY: Verify joins don't reflect partial/rolled-back transactions  
+    # Create a booking that we'll roll back.
+    rollback_tx = tm.begin()
+    tm.insert(
+        rollback_tx,
+        "booking",
+        6001,
+        {
+            "BookingID": 6001,
+            "MemberID": 1,
+            "TripID": 101,
+            "SeatNo": "C1",
+            "BookingTime": datetime.now(timezone.utc).isoformat(),
+            "Status": "confirmed",
+        },
+    )
+    tm.rollback(rollback_tx)
+    
+    # Verify the rolled-back booking does NOT appear in join results.
+    join_rows = tm.db_manager.join_tables("booking", "member", "MemberID", "MemberID")
+    booking_6001_in_join = any(
+        row.get("booking.BookingID") == 6001 for row in join_rows
+    )
+    assert not booking_6001_in_join, "Rolled-back booking appeared in join result!"
+
+    #   CONSISTENCY: Verify joins only show valid FK references  
+    # Commit a valid booking so joins see it.
+    place_booking(tm, booking_id=6002, member_id=1, trip_id=101, seat_no="C2")
+    
+    # Join booking -> member and verify all rows have valid MemberIDs.
+    booking_member_joins = tm.db_manager.join_tables("booking", "member", "MemberID", "MemberID")
+    for row in booking_member_joins:
+        booking_id = row.get("booking.BookingID")
+        member_id_booking = row.get("booking.MemberID")
+        member_id_member = row.get("member.MemberID")
+        # Both sides must have the same MemberID if the join succeeded.
+        assert member_id_booking == member_id_member, \
+            f"FK consistency violated in join for booking {booking_id}"
+    
+    # Join booking -> trip and verify all rows have valid TripIDs.
+    booking_trip_joins = tm.db_manager.join_tables("booking", "trip", "TripID", "TripID")
+    for row in booking_trip_joins:
+        booking_id = row.get("booking.BookingID")
+        trip_id_booking = row.get("booking.TripID")
+        trip_id_trip = row.get("trip.TripID")
+        # Both sides must have the same TripID if the join succeeded.
+        assert trip_id_booking == trip_id_trip, \
+            f"FK consistency violated in join for booking {booking_id}"
+
+    #   ISOLATION: Verify concurrent transactions don't pollute join results  
+    # Thread A will start a transaction but not commit; Thread B will join.
+    # Thread B's join should NOT see Thread A's uncommitted changes.
+    thread_lock = threading.Lock()
+    thread_event_uncommitted = threading.Event()
+    thread_event_ready_to_check = threading.Event()
+    join_result_during_uncommitted = []
+    
+    def thread_a_uncommitted_booking() -> None:
+        # Start a transaction but hold it open (don't commit).
+        tx_a = tm.begin()
+        tm.insert(
+            tx_a,
+            "booking",
+            6003,
+            {
+                "BookingID": 6003,
+                "MemberID": 2,
+                "TripID": 102,
+                "SeatNo": "D1",
+                "BookingTime": datetime.now(timezone.utc).isoformat(),
+                "Status": "confirmed",
+            },
+        )
+        # Signal that the uncommitted insert is staged.
+        thread_event_uncommitted.set()
+        # Wait for Thread B to run its join check.
+        thread_event_ready_to_check.wait()
+        # Now rollback.
+        tm.rollback(tx_a)
+    
+    def thread_b_join_check() -> None:
+        # Wait for Thread A to stage its insert.
+        thread_event_uncommitted.wait()
+        # Run a join; it should NOT see booking 6003.
+        rows = tm.db_manager.join_tables("booking", "member", "MemberID", "MemberID")
+        with thread_lock:
+            join_result_during_uncommitted.clear()
+            for row in rows:
+                if row.get("booking.BookingID") == 6003:
+                    join_result_during_uncommitted.append(row)
+        # Signal that check is complete.
+        thread_event_ready_to_check.set()
+    
+    ta = threading.Thread(target=thread_a_uncommitted_booking)
+    tb = threading.Thread(target=thread_b_join_check)
+    ta.start()
+    tb.start()
+    ta.join()
+    tb.join()
+    
+    # Verify Thread B did NOT see the uncommitted booking in joins.
+    assert len(join_result_during_uncommitted) == 0, \
+        "Isolation violated: join saw uncommitted transaction!"
+
+    #   DURABILITY: Verify joins on committed data persist across restarts  
+    # Create and commit a booking.
+    place_booking(tm, booking_id=6004, member_id=1, trip_id=101, seat_no="E1")
+    
+    # Restart the transaction manager (simulating a crash and recovery).
+    tm_restarted = ACIDTransactionManager(_build_travel_database(), storage_dir=base_dir)
+    
+    # Run the same join query on the restarted instance.
+    restarted_joins = tm_restarted.db_manager.join_tables("booking", "member", "MemberID", "MemberID")
+    booking_6004_in_restarted_join = any(
+        row.get("booking.BookingID") == 6004 for row in restarted_joins
+    )
+    # The committed booking must appear in the restarted join.
+    assert booking_6004_in_restarted_join, \
+        "Durability violated: booking did not persist in join after restart!"
+    
+    print("[ACID on JOINs] PASS")
+
+
 def test_join_and_foreign_keys(base_dir: str) -> None:
     # This test proves consistency via joins and foreign-key enforcement.
     print("[JOIN + Foreign Key] Validating join output and FK enforcement...")
@@ -867,6 +997,13 @@ def main() -> None:
     if base.exists():
         shutil.rmtree(base)
     base.mkdir(parents=True, exist_ok=True)
+    
+    # New: Test ACID properties specifically on join operations.
+    test_acid_on_joins(str(base))
+    if base.exists():
+        shutil.rmtree(base)
+    base.mkdir(parents=True, exist_ok=True)
+    
     test_join_and_foreign_keys(str(base))
     print("All ACID validation checks passed.")
 
