@@ -1,4 +1,5 @@
 import logging
+import os
 from functools import wraps
 from flask import Flask, request, jsonify, render_template
 import pymysql
@@ -154,26 +155,80 @@ def profile(current_user):
     finally:
         conn.close()
 
-@app.route('/api/bookings', methods=['GET'])
+@app.route('/api/bookings', methods=['GET', 'POST'])
 @token_required
 def user_bookings(current_user):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            # cursor.execute("""
-            #     SELECT b.BookingID, b.TripID, b.SeatNo, b.Status, t.Date, t.Status AS TripStatus 
-            #     FROM BOOKING b 
-            #     JOIN TRIP t ON b.TripID = t.TripID 
-            #     WHERE b.MemberID = %s AND t.Status != 'Cancelled'
-            # """, (current_user['member_id'],))
-            cursor.execute("""
-                SELECT b.BookingID, b.TripID, b.SeatNo, b.Status, t.Date, t.Status AS TripStatus 
-                FROM BOOKING b 
-                JOIN TRIP t ON b.TripID = t.TripID 
-                WHERE b.MemberID = %s AND t.Status != 'Cancelled'
-                ORDER BY t.Date DESC
-            """, (current_user['member_id'],))
-            return jsonify(cursor.fetchall()), 200
+            if request.method == 'GET':
+                cursor.execute("""
+                    SELECT b.BookingID, b.TripID, b.SeatNo, b.Status, t.Date, t.Status AS TripStatus 
+                    FROM BOOKING b 
+                    JOIN TRIP t ON b.TripID = t.TripID 
+                    WHERE b.MemberID = %s AND t.Status != 'Cancelled'
+                    ORDER BY t.Date DESC
+                """, (current_user['member_id'],))
+                return jsonify(cursor.fetchall()), 200
+
+            data = request.get_json(silent=True) or {}
+            trip_id = data.get('trip_id')
+            seat_no = data.get('seat_no')
+
+            if trip_id is None or seat_no is None:
+                return jsonify({'error': 'Missing parameters'}), 400
+
+            lock_key = f"booking:{trip_id}:{seat_no}"
+            cursor.execute("SELECT GET_LOCK(%s, 10) AS lock_status", (lock_key,))
+            lock_row = cursor.fetchone()
+
+            if not lock_row or lock_row.get('lock_status') != 1:
+                return jsonify({'error': 'Seat is currently busy'}), 409
+
+            try:
+                cursor.execute("SELECT Status FROM TRIP WHERE TripID = %s FOR UPDATE", (trip_id,))
+                trip = cursor.fetchone()
+
+                if not trip:
+                    conn.rollback()
+                    return jsonify({'error': 'Trip not found'}), 404
+
+                if trip['Status'] == 'Cancelled':
+                    conn.rollback()
+                    return jsonify({'error': 'Trip is cancelled'}), 409
+
+                cursor.execute(
+                    "SELECT BookingID FROM BOOKING WHERE TripID = %s AND SeatNo = %s FOR UPDATE",
+                    (trip_id, seat_no)
+                )
+                existing_booking = cursor.fetchone()
+
+                if existing_booking:
+                    conn.rollback()
+                    return jsonify({'error': 'Seat already booked'}), 409
+
+                cursor.execute(
+                    "INSERT INTO BOOKING (MemberID, TripID, SeatNo, Status) VALUES (%s, %s, %s, 'Confirmed')",
+                    (current_user['member_id'], trip_id, seat_no)
+                )
+                booking_id = cursor.lastrowid
+                cursor.execute(
+                    "INSERT INTO TICKET (BookingID, QRCode, IsVerified) VALUES (%s, %s, %s)",
+                    (booking_id, f"QR-{trip_id}-{seat_no}-{current_user['member_id']}", 0)
+                )
+
+                conn.commit()
+                logging.info(
+                    f"BOOKING: User {current_user['username']} booked TripID {trip_id}, SeatNo {seat_no}."
+                )
+                return jsonify({
+                    'message': 'Seat booked successfully',
+                    'booking_id': booking_id,
+                    'trip_id': trip_id,
+                    'seat_no': seat_no
+                }), 201
+            finally:
+                cursor.execute("SELECT RELEASE_LOCK(%s)", (lock_key,))
     finally:
         conn.close()
 
@@ -352,4 +407,4 @@ def delete_user(current_user, member_id):
         conn.close()
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(host='0.0.0.0', port=int(os.getenv('PORT', '8000')))
