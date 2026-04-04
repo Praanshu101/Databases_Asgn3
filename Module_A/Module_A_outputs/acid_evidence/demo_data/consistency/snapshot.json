@@ -1,0 +1,176 @@
+{
+  "db_name": "__default__",
+  "tables": {
+    "member": {
+      "order": 8,
+      "schema": {
+        "MemberID": "<class 'int'>",
+        "Name": {
+          "type": "<class 'str'>",
+          "required": true
+        },
+        "Age": {
+          "type": "<class 'int'>",
+          "nullable": true,
+          "required": false
+        },
+        "Email": {
+          "type": "<class 'str'>",
+          "required": true
+        },
+        "Phone": {
+          "type": "<class 'str'>",
+          "nullable": true,
+          "required": false
+        },
+        "CreatedAt": {
+          "type": "<class 'str'>",
+          "required": true
+        }
+      },
+      "search_key": "MemberID",
+      "records": [
+        [
+          1,
+          {
+            "MemberID": 1,
+            "Name": "Asha",
+            "Age": 22,
+            "Email": "asha@example.com",
+            "Phone": "9000000001",
+            "CreatedAt": "2026-04-04T09:41:22.111865+00:00"
+          }
+        ],
+        [
+          2,
+          {
+            "MemberID": 2,
+            "Name": "Ravi",
+            "Age": 24,
+            "Email": "ravi@example.com",
+            "Phone": "9000000002",
+            "CreatedAt": "2026-04-04T09:41:22.111865+00:00"
+          }
+        ]
+      ]
+    },
+    "trip": {
+      "order": 8,
+      "schema": {
+        "TripID": "<class 'int'>",
+        "ScheduleID": "<class 'int'>",
+        "Date": {
+          "type": "<class 'str'>",
+          "required": true
+        },
+        "ActualStart": {
+          "type": "<class 'str'>",
+          "nullable": true,
+          "required": false
+        },
+        "ActualEnd": {
+          "type": "<class 'str'>",
+          "nullable": true,
+          "required": false
+        },
+        "Status": {
+          "type": "<class 'str'>",
+          "required": true,
+          "allowed": [
+            "scheduled",
+            "in_progress",
+            "completed",
+            "cancelled"
+          ]
+        },
+        "Capacity": "<class 'int'>",
+        "BookedSeats": "<class 'int'>"
+      },
+      "search_key": "TripID",
+      "records": [
+        [
+          101,
+          {
+            "TripID": 101,
+            "ScheduleID": 5001,
+            "Date": "2026-04-05",
+            "ActualStart": null,
+            "ActualEnd": null,
+            "Status": "scheduled",
+            "Capacity": 20,
+            "BookedSeats": 1
+          }
+        ],
+        [
+          102,
+          {
+            "TripID": 102,
+            "ScheduleID": 5002,
+            "Date": "2026-04-06",
+            "ActualStart": null,
+            "ActualEnd": null,
+            "Status": "scheduled",
+            "Capacity": 10,
+            "BookedSeats": 0
+          }
+        ]
+      ]
+    },
+    "booking": {
+      "order": 8,
+      "schema": {
+        "BookingID": "<class 'int'>",
+        "MemberID": "<class 'int'>",
+        "TripID": "<class 'int'>",
+        "SeatNo": {
+          "type": "<class 'str'>",
+          "required": true
+        },
+        "BookingTime": {
+          "type": "<class 'str'>",
+          "required": true
+        },
+        "Status": {
+          "type": "<class 'str'>",
+          "required": true,
+          "allowed": [
+            "confirmed",
+            "cancelled"
+          ]
+        }
+      },
+      "search_key": "BookingID",
+      "records": [
+        [
+          3001,
+          {
+            "BookingID": 3001,
+            "MemberID": 1,
+            "TripID": 101,
+            "SeatNo": "A1",
+            "BookingTime": "2026-04-04T09:41:22.128499+00:00",
+            "Status": "confirmed"
+          }
+        ]
+      ]
+    }
+  },
+  "foreign_keys": {
+    "booking": [
+      {
+        "column": "MemberID",
+        "referenced_db": "__default__",
+        "referenced_table": "member",
+        "referenced_column": "MemberID",
+        "on_delete": "restrict"
+      },
+      {
+        "column": "TripID",
+        "referenced_db": "__default__",
+        "referenced_table": "trip",
+        "referenced_column": "TripID",
+        "on_delete": "restrict"
+      }
+    ]
+  }
+}

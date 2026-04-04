@@ -1,0 +1,59 @@
+[
+  {
+    "name": "Atomicity",
+    "status": "PASS",
+    "summary": "A crash after the WAL commit was recovered on restart without leaving a partial booking.",
+    "proof": [
+      "Recovered trip.BookedSeats = 1",
+      "Recovered booking exists = True",
+      "No half-written rows remained in any B+ Tree"
+    ],
+    "metrics": {
+      "recovered_booked_seats": 1,
+      "recovered_booking_present": 1
+    }
+  },
+  {
+    "name": "Consistency",
+    "status": "PASS",
+    "summary": "Foreign keys, seat rules, and referential deletes were enforced before commit.",
+    "proof": [
+      "Invalid booking insert rejected = True",
+      "Referenced trip delete rejected = True",
+      "Consistency check ran on the staged post-transaction state"
+    ],
+    "metrics": {
+      "fk_violation_rejected": 1,
+      "delete_violation_rejected": 1
+    }
+  },
+  {
+    "name": "Isolation",
+    "status": "PASS",
+    "summary": "Thirty concurrent booking attempts were serialized so only ten fit the trip capacity.",
+    "proof": [
+      "Successful bookings = 10",
+      "Rejected bookings = 20",
+      "Final trip.BookedSeats = 10"
+    ],
+    "metrics": {
+      "successes": 10,
+      "failures": 20,
+      "booked_seats": 10
+    }
+  },
+  {
+    "name": "Durability",
+    "status": "PASS",
+    "summary": "A committed booking persisted after restart because the snapshot and WAL checkpoint survived.",
+    "proof": [
+      "Committed booking persisted = True",
+      "Reloaded trip.BookedSeats = 1",
+      "Snapshot reload reproduced the committed state exactly"
+    ],
+    "metrics": {
+      "booking_persisted": 1,
+      "trip_persisted": 1
+    }
+  }
+]

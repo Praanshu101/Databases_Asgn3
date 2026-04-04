@@ -1,0 +1,6 @@
+{"lsn":11,"type":"BEGIN","txid":"d760868e102941a9aaf7d025c0566656"}
+{"lsn":12,"type":"SET","txid":"d760868e102941a9aaf7d025c0566656","table":"booking","key":3002,"value":{"BookingID":3002,"MemberID":999,"TripID":101,"SeatNo":"A2","BookingTime":"2026-04-04T09:41:22.131650+00:00","Status":"confirmed"}}
+{"lsn":13,"type":"ROLLBACK","txid":"d760868e102941a9aaf7d025c0566656"}
+{"lsn":14,"type":"BEGIN","txid":"5ee1bfe111c94d958a2505e33c91f4f0"}
+{"lsn":15,"type":"DELETE","txid":"5ee1bfe111c94d958a2505e33c91f4f0","table":"trip","key":101,"value":null}
+{"lsn":16,"type":"ROLLBACK","txid":"5ee1bfe111c94d958a2505e33c91f4f0"}

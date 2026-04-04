@@ -3,7 +3,7 @@
 This repository contains the Assignment 2 base system plus Assignment 3 extensions for:
 - Transaction management with `BEGIN/COMMIT/ROLLBACK`
 - Write-ahead logging (WAL) and crash recovery
-- ACID validation across three relations (`users`, `products`, `orders`)
+- ACID validation across three relations (`member`, `trip`, `booking`)
 - Multi-threaded concurrency and stress testing
 
 
@@ -12,6 +12,13 @@ Run ACID tests:
 ```powershell
 cd Module_A
 python acid_validation.py
+```
+
+Generate the visual ACID evidence pack for the report:
+
+```powershell
+cd Module_A
+python acid_validation.py --report
 ```
 
 Expected output includes:
