@@ -5,8 +5,265 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f1f5f9;
+            --text: #0f172a;
+            --muted: #64748b;
+            --card: rgba(255, 255, 255, 0.85);
+            --stroke: #e2e8f0;
+            --accent-1: #2563eb;
+            --accent-2: #7c3aed;
+            --success: #16a34a;
+            --danger: #dc2626;
+        }
+
+        body {
+            background:
+                radial-gradient(circle at 10% 0%, rgba(147, 197, 253, 0.6), transparent 34%),
+                radial-gradient(circle at 90% 10%, rgba(196, 181, 253, 0.7), transparent 30%),
+                var(--bg);
+            color: var(--text);
+            font-family: "Inter", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            animation: bgFlow 16s ease-in-out infinite;
+        }
+
+        @keyframes bgFlow {
+            0%, 100% {
+                background-position: 0% 0%, 100% 10%, center;
+            }
+            50% {
+                background-position: 8% 6%, 92% 2%, center;
+            }
+        }
+
+        .navbar {
+            background: linear-gradient(90deg, #0f172a, #1e293b) !important;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.2);
+            backdrop-filter: blur(6px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .navbar::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -130%;
+            width: 42%;
+            height: 100%;
+            transform: skewX(-24deg);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+            animation: navSheen 9s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes navSheen {
+            0%, 70%, 100% { left: -130%; }
+            85% { left: 130%; }
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            letter-spacing: 0.2px;
+        }
+
+        #welcome-text {
+            font-size: 0.92rem;
+            color: #cbd5e1;
+        }
+
+        .dashboard-shell {
+            padding-top: 0.4rem;
+        }
+
+        h2 {
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 1rem;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--stroke);
+            border-radius: 18px;
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+            backdrop-filter: blur(6px);
+            animation: cardIn 0.55s ease;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.24s ease, box-shadow 0.24s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 18px 34px rgba(15, 23, 42, 0.12);
+        }
+
+        .card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(124, 58, 237, 0.2), transparent 45%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        @keyframes cardIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h4, h5 {
+            font-weight: 700;
+            margin-bottom: 0.9rem;
+        }
+
+        .form-label {
+            color: var(--muted);
+            font-weight: 600;
+        }
+
+        .form-control,
+        .form-select {
+            border-radius: 11px;
+            border: 1px solid #dbe6f3;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: #93c5fd;
+            box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.15);
+        }
+
+        .btn {
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -120%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+            transform: skewX(-24deg);
+            transition: left 0.5s ease;
+        }
+
+        .btn:hover::before {
+            left: 130%;
+        }
+
+        .btn-primary {
+            border: none;
+            background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.28);
+        }
+
+        .btn-success:hover,
+        .btn-warning:hover,
+        .btn-danger:hover {
+            transform: translateY(-1px);
+        }
+
+        .table {
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 0;
+        }
+
+        .table thead th {
+            background: #eef2ff;
+            color: #312e81;
+            border-bottom: 1px solid #dbeafe;
+            font-weight: 700;
+        }
+
+        .table > :not(caption) > * > * {
+            vertical-align: middle;
+        }
+
+        .table tbody tr {
+            animation: rowFade 0.42s ease both;
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .table tbody tr:hover {
+            transform: translateX(3px);
+            box-shadow: inset 3px 0 0 rgba(59, 130, 246, 0.6);
+        }
+
+        .table tbody tr:nth-child(1) { animation-delay: 0.03s; }
+        .table tbody tr:nth-child(2) { animation-delay: 0.06s; }
+        .table tbody tr:nth-child(3) { animation-delay: 0.09s; }
+        .table tbody tr:nth-child(4) { animation-delay: 0.12s; }
+        .table tbody tr:nth-child(5) { animation-delay: 0.15s; }
+        .table tbody tr:nth-child(6) { animation-delay: 0.18s; }
+        .table tbody tr:nth-child(7) { animation-delay: 0.21s; }
+        .table tbody tr:nth-child(8) { animation-delay: 0.24s; }
+
+        @keyframes rowFade {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .table-striped > tbody > tr:nth-of-type(odd) > * {
+            background: rgba(248, 250, 252, 0.85);
+        }
+
+        hr {
+            border-top: 1px solid #dbeafe;
+            opacity: 1;
+        }
+
+        .section-tag {
+            display: inline-block;
+            background: linear-gradient(90deg, #bfdbfe, #ddd6fe);
+            color: #1e3a8a;
+            font-weight: 700;
+            font-size: 0.75rem;
+            padding: 0.28rem 0.7rem;
+            border-radius: 999px;
+            margin-bottom: 0.6rem;
+            animation: glowTag 2.4s ease-in-out infinite;
+        }
+
+        @keyframes glowTag {
+            0%, 100% { box-shadow: 0 0 0 rgba(99, 102, 241, 0); }
+            50% { box-shadow: 0 0 0.7rem rgba(99, 102, 241, 0.24); }
+        }
+    </style>
 </head>
-<body class="bg-light">
+<body>
     <nav class="navbar navbar-dark bg-dark mb-4">
         <div class="container">
             <span class="navbar-brand mb-0 h1">Shuttle System Dashboard</span>
@@ -17,8 +274,9 @@
         </div>
     </nav>
 
-    <div class="container pb-5">
+    <div class="container pb-5 dashboard-shell">
         <div id="user-section" class="d-none">
+            <span class="section-tag">Regular User</span>
             <h2>My Portfolio</h2>
             <div class="card mb-4 p-3 shadow-sm">
                 <h4>Personal Information</h4>
@@ -70,6 +328,7 @@
         </div>
 
         <div id="admin-section" class="d-none">
+            <span class="section-tag">Administrator</span>
             <h2>Admin Panel</h2>
             
             <div class="card mb-4 p-3 shadow-sm">
