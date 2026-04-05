@@ -14,7 +14,7 @@ cd Module_A
 python acid_validation.py
 ```
 
-Generate the visual ACID evidence pack for the report:
+Generate the visual ACID evidence pack:
 
 ```powershell
 cd Module_A
@@ -24,6 +24,10 @@ python acid_validation.py --report
 Expected output includes:
 - `Atomicity + Durability + Recovery PASS`
 - `Isolation under contention PASS`
+- `ACID on JOINs: PASS`
+- `JOIN + Foreign Key: PASS`
+- `All ACID validation checks passed`
+
 
 
 ## Assignment 3 Stress Test (Module B)
